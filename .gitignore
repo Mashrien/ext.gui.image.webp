@@ -1,0 +1,7 @@
+bin/
+obj/
+publish/
+.vs/
+.idea/
+__pycache__/
+*.user
