@@ -6,6 +6,7 @@ using SkiaSharp;
 namespace Mash.GUI.MNXArchiver.Plugins.Image.Webp;
 
 internal static unsafe class NativeExports {
+    // These exports share ABI 1 with MNXArchiver's native image provider loader.
     private static readonly ImageProviderDescription Description =
         new ImageProviderDescription("webp", "WebP", "1.0.2", "2.0.0", "2.1.999", [".webp"]);
 
@@ -19,6 +20,7 @@ internal static unsafe class NativeExports {
         try {
             byte[] description = JsonSerializer.SerializeToUtf8Bytes(Description,
                 ImageProviderJson.Default.ImageProviderDescription);
+            // The host first queries the required byte count with no destination.
             if (destination != null && capacity >= description.Length) {
                 description.AsSpan().CopyTo(new Span<byte>(destination, description.Length));
                 }
@@ -38,6 +40,7 @@ internal static unsafe class NativeExports {
             return ImageProviderStatus.InvalidImage;
             }
 
+        // Inspect the container before asking Skia to allocate a decoder.
         ImageProviderStatus status = WebpHeader.Inspect(new ReadOnlySpan<byte>(source, length),
             out int width, out int height);
         if (status == ImageProviderStatus.Success) {
@@ -87,6 +90,7 @@ internal static unsafe class NativeExports {
     private static bool ValidDestination(long capacity, int stride, int width, int height,
         int sourceWidth, int sourceHeight) {
         bool fullSize = width == sourceWidth && height == sourceHeight;
+        // The preview rounds odd dimensions up when requesting half resolution.
         bool halfSize = width == (sourceWidth + 1) / 2 && height == (sourceHeight + 1) / 2;
         if (!fullSize && !halfSize) {
             return false;
@@ -112,6 +116,7 @@ internal static unsafe class NativeExports {
         SKImageInfo output = new SKImageInfo(width, height, SKColorType.Bgra8888, SKAlphaType.Premul, srgb);
         SKCodecResult decoded = codec.GetPixels(output, (nint)destination, stride, new SKCodecOptions(0));
         if (decoded == SKCodecResult.InvalidScale) {
+            // Some WebP variants need a full decode before they can be resized.
             return DecodeAndScale(codec, output, (nint)destination, stride, sourceWidth, sourceHeight);
             }
         return decoded == SKCodecResult.Success ? ImageProviderStatus.Success : ImageProviderStatus.DecodeFailed;

@@ -3,6 +3,7 @@ using System.Buffers.Binary;
 namespace Mash.GUI.MNXArchiver.Plugins.Image.Webp;
 
 internal static class WebpHeader {
+    // Validate chunk bounds and dimensions without decoding or allocating pixels.
     internal static ImageProviderStatus Inspect(ReadOnlySpan<byte> encoded, out int width, out int height) {
         width = 0;
         height = 0;
@@ -29,6 +30,7 @@ internal static class WebpHeader {
             ReadOnlySpan<byte> tag = encoded.Slice(position, 4);
             uint chunkSize = BinaryPrimitives.ReadUInt32LittleEndian(encoded.Slice(position + 4, 4));
             position += 8;
+            // RIFF pads odd chunk lengths to the next two-byte boundary.
             long paddedLength = (long)chunkSize + (chunkSize & 1);
             if (paddedLength > end - position) {
                 return ImageProviderStatus.InvalidImage;
@@ -39,6 +41,7 @@ internal static class WebpHeader {
                 if (chunk.Length != 10) {
                     return ImageProviderStatus.InvalidImage;
                     }
+                // The extended header's animation flag is unsupported by this provider.
                 if ((chunk[0] & 2) != 0) {
                     return ImageProviderStatus.AnimatedImage;
                     }
@@ -68,6 +71,7 @@ internal static class WebpHeader {
             width = payloadWidth;
             height = payloadHeight;
             }
+        // A static image's canvas must agree with its encoded pixel dimensions.
         if (width != payloadWidth || height != payloadHeight) {
             return ImageProviderStatus.InvalidImage;
             }
@@ -105,6 +109,7 @@ internal static class WebpHeader {
         if (dimensions >> 29 != 0) {
             return false;
             }
+        // Lossless dimensions use two 14-bit fields, each storing size minus one.
         width = 1 + (int)(dimensions & 0x3fff);
         height = 1 + (int)((dimensions >> 14) & 0x3fff);
         return true;

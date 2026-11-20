@@ -22,6 +22,7 @@ internal struct ImageProviderImageInfo {
 internal sealed record ImageProviderDescription(string Id, string Name, string Version, string MinHostVersion,
     string MaxHostVersion, string[] Extensions);
 
+// Source-generated JSON keeps descriptor serialization compatible with NativeAOT.
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
 [JsonSerializable(typeof(ImageProviderDescription))]
 internal partial class ImageProviderJson : JsonSerializerContext { }

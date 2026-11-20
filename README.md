@@ -19,24 +19,46 @@ Install [MNXArchiver](https://github.com/Mashrien/MNXArchiver) and the
 
 ## Build
 
-Use the .NET 10 SDK and the platform’s NativeAOT toolchain. On Linux x64 run
+Use the .NET 10 SDK and the platform’s NativeAOT toolchain. NuGet restores
+SkiaSharp 3.119.4 and the NativeAOT compiler pack (at least 10.0.14).
+On Linux x64, install Clang and the platform development libraries, then run:
 
 ```sh
-dotnet publish ext.gui.image.webp.csproj -c Release -r linux-x64 -o ./publish/linux-x64
+./build.sh
 ```
 
-On Windows with Visual Studio C++ build tools and a Windows SDK run
+On Windows x64, use a Visual Studio developer PowerShell with the C++ build
+tools and a Windows SDK available, then run:
 
 ```powershell
-dotnet publish ext.gui.image.webp.csproj -c Release -r win-x64 -o ./publish/win-x64
+./build.ps1
 ```
 
-Both commands produce `ext.gui.image.webp.mnxp`. The C declarations are in
-[`include/mnx_image_provider.h`](include/mnx_image_provider.h).
+Both scripts copy only `ext.gui.image.webp.mnxp` into
+`../MNX_Builds/ext.gui.image.webp/{linux-x64,win-x64}` relative to this checkout.
+Pass a directory to override that destination, such as `./build.sh ./release`
+or `./build.ps1 -OutputDirectory ./release`. Build intermediates stay in ignored
+`bin/` and `obj/` directories. Linux and Windows NativeAOT builds run on their
+respective platforms.
+
+The plugin uses the host's `libSkiaSharp.so` on Linux or `libSkiaSharp.dll` on
+Windows. Do not distribute a separate SkiaSharp native library with this plugin.
 
 ## Interface
 
 The provider returns pixels to the preview renderer. Archive extraction continues to return the original WebP bytes.
+
+- Static lossy (`VP8`), lossless (`VP8L`), and extended (`VP8X`) images, including alpha.
+- Full or half resolution output in premultiplied BGRA, with caller-supplied row stride.
+- Header validation rejects truncated containers, mismatched dimensions, and animated WebP.
+
+## Source map
+
+- [`NativeExports.cs`](NativeExports.cs): ABI entry points, destination checks, and SkiaSharp decoding.
+- [`WebpHeader.cs`](WebpHeader.cs): RIFF chunk parsing and static image dimensions.
+- [`ImageProviderProtocol.cs`](ImageProviderProtocol.cs): shared status values, metadata, and JSON descriptor.
+- [`include/mnx_image_provider.h`](include/mnx_image_provider.h): C declarations for native ABI 1.
+- [`NativeExtension.targets`](NativeExtension.targets): names the NativeAOT shared library with the `.mnxp` suffix.
 
 ## Source
 
